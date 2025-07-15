@@ -64,6 +64,9 @@ class NetworkParser {
     /// number of network dimensions
     int dims_count;
 
+    /// number of mesh network
+    int mesh_count;
+
     /// NPUs count per each dimension
     std::vector<int> npus_count_per_dim;
 

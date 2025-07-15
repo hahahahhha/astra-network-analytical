@@ -37,7 +37,7 @@ int NetworkParser::get_dims_count() const noexcept {
 
 std::vector<int> NetworkParser::get_npus_counts_per_dim() const noexcept {
     assert(dims_count > 0);
-    assert(npus_count_per_dim.size() == dims_count);
+    assert(npus_count_per_dim.size() == dims_count+mesh_count);
 
     return npus_count_per_dim;
 }
@@ -66,11 +66,15 @@ std::vector<TopologyBuildingBlock> NetworkParser::get_topologies_per_dim() const
 void NetworkParser::parse_network_config_yml(const YAML::Node& network_config) noexcept {
     // parse topology_per_dim
     const auto topology_names = parse_vector<std::string>(network_config["topology"]);
+    int mesh_cnt = 0;
     for (const auto& topology_name : topology_names) {
         const auto topology_dim = NetworkParser::parse_topology_name(topology_name);
         topology_per_dim.push_back(topology_dim);
+        if (topology_name == "Mesh") {  // 假设parse_topology_name返回的结构包含type字段
+            mesh_cnt++;
+        }
     }
-
+    mesh_count = mesh_cnt;
     // set dims_count
     dims_count = static_cast<int>(topology_per_dim.size());
 
@@ -98,6 +102,10 @@ TopologyBuildingBlock NetworkParser::parse_topology_name(const std::string& topo
         return TopologyBuildingBlock::Switch;
     }
 
+    if (topology_name == "Mesh") {
+        return TopologyBuildingBlock::Mesh;
+    }
+
     // shouldn't reach here
     std::cerr << "[Error] (network/analytical) " << "Topology name " << topology_name << " not supported" << std::endl;
     std::exit(-1);
@@ -105,7 +113,7 @@ TopologyBuildingBlock NetworkParser::parse_topology_name(const std::string& topo
 
 void NetworkParser::check_validity() const noexcept {
     // dims_count should match
-    if (dims_count != npus_count_per_dim.size()) {
+    if (dims_count+mesh_count != npus_count_per_dim.size()) {
         std::cerr << "[Error] (network/analytical) " << "length of npus_count (" << npus_count_per_dim.size()
                   << ") doesn't match with dimensions (" << dims_count << ")" << std::endl;
         std::exit(-1);
